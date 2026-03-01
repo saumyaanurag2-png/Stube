@@ -1,92 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StudyTube (Fixed)</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>StudyTube (Fixed)</title>
 
-  <!-- YouTube IFrame API MUST load before JS uses it -->
-  <script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
 
-  <style>
-    body { margin:0; font-family: system-ui, sans-serif; background:#0b1220; color:#e5e7eb; }
-    header { padding:14px 18px; border-bottom:1px solid #1e293b; background:#020617; }
-    main { display:grid; grid-template-columns: 300px 1fr; height: calc(100vh - 52px); }
-    aside { padding:12px; border-right:1px solid #1e293b; overflow-y:auto; }
-    section { padding:12px; }
-    input, button { width:100%; padding:10px; margin-bottom:8px; border-radius:10px; border:1px solid #334155; background:#020617; color:#e5e7eb; }
-    button { cursor:pointer; }
-    button:hover { background:#1e293b; }
-    .course { border:1px solid #334155; border-radius:12px; padding:10px; margin-bottom:8px; cursor:pointer; }
-    .course.active { background:#1e293b; }
-    .progress { height:6px; background:#020617; border-radius:6px; overflow:hidden; margin-top:6px; }
-    .progress div { height:100%; background:#38bdf8; }
-    #player { width:100%; aspect-ratio:16/9; background:#000; border-radius:14px; }
-    .meta { margin-top:8px; color:#94a3b8; }
-  </style>
+<style>
+body {
+  margin:0;
+  font-family: system-ui, sans-serif;
+  background:#0b1220;
+  color:#e5e7eb;
+}
+
+header {
+  padding:14px 18px;
+  border-bottom:1px solid #1e293b;
+  background:#020617;
+}
+
+main {
+  display:grid;
+  grid-template-columns:300px 1fr;
+  height:calc(100vh - 52px);
+}
+
+aside {
+  padding:12px;
+  border-right:1px solid #1e293b;
+  overflow-y:auto;
+}
+
+section { padding:12px; }
+
+input,button {
+  width:100%;
+  padding:10px;
+  margin-bottom:8px;
+  border-radius:10px;
+  border:1px solid #334155;
+  background:#020617;
+  color:#e5e7eb;
+}
+
+button { cursor:pointer; }
+button:hover { background:#1e293b; }
+
+.course {
+  border:1px solid #334155;
+  border-radius:12px;
+  padding:10px;
+  margin-bottom:8px;
+  cursor:pointer;
+}
+
+.course.active { background:#1e293b; }
+
+.progress {
+  height:6px;
+  background:#020617;
+  border-radius:6px;
+  overflow:hidden;
+  margin-top:6px;
+}
+
+.progress div {
+  height:100%;
+  background:#38bdf8;
+}
+
+.deleteBtn{
+  margin-top:6px;
+  background:#7f1d1d;
+  border:none;
+}
+
+.deleteBtn:hover{
+  background:#b91c1c;
+}
+
+#player {
+  width:100%;
+  aspect-ratio:16/9;
+  background:#000;
+  border-radius:14px;
+}
+
+.meta {
+  margin-top:8px;
+  color:#94a3b8;
+}
+</style>
 </head>
+
 <body>
+
 <header><strong>StudyTube – Continuous Study (Fixed)</strong></header>
 
 <main>
-  <aside>
-    <input id="title" placeholder="Course name (e.g. Electrostatics – Physics)" />
-    <input id="url" placeholder="YouTube PLAYLIST URL" />
-    <button onclick="addCourse()">Add Course</button>
-    <hr style="border-color:#1e293b" />
-    <div id="courses"></div>
-  </aside>
+<aside>
+<input id="title" placeholder="Course name (e.g. Electrostatics – Physics)" />
+<input id="url" placeholder="YouTube PLAYLIST URL" />
+<button onclick="addCourse()">Add Course</button>
 
-  <section>
-    <div id="player"></div>
-    <div class="meta" id="status">Add a playlist to start</div>
-  </section>
+<hr style="border-color:#1e293b" />
+
+<div id="courses"></div>
+</aside>
+
+<section>
+<div id="player"></div>
+<div class="meta" id="status">Add a playlist to start</div>
+</section>
 </main>
 
 <script>
-/* =====================
-   STORAGE
-===================== */
-const KEY = 'studytube_courses';
-let courses = JSON.parse(localStorage.getItem(KEY) || '[]');
-let currentIndex = null;
-let player = null;
+/* STORAGE */
+const KEY='studytube_courses';
+let courses=JSON.parse(localStorage.getItem(KEY)||'[]');
+let currentIndex=null;
+let player=null;
 
-/* =====================
-   RENDER COURSES
-===================== */
-function renderCourses() {
-  const box = document.getElementById('courses');
-  box.innerHTML = '';
+/* RENDER */
+function renderCourses(){
+  const box=document.getElementById('courses');
+  box.innerHTML='';
 
-  courses.forEach((c, i) => {
-    const percent = c.total ? Math.floor((c.videoIndex / c.total) * 100) : 0;
-    const div = document.createElement('div');
-    div.className = 'course' + (i === currentIndex ? ' active' : '');
-    div.innerHTML = `
+  courses.forEach((c,i)=>{
+    const percent=c.total
+      ?Math.floor((c.videoIndex/c.total)*100)
+      :0;
+
+    const div=document.createElement('div');
+    div.className='course'+
+      (i===currentIndex?' active':'');
+
+    div.innerHTML=`
       <strong>${c.title}</strong>
-      <div class="progress"><div style="width:${percent}%"></div></div>
+      <div class="progress">
+        <div style="width:${percent}%"></div>
+      </div>
       <small>${percent}% complete</small>
+      <button class="deleteBtn">Remove</button>
     `;
-    div.onclick = () => openCourse(i);
+
+    div.onclick=()=>openCourse(i);
+
+    div.querySelector('.deleteBtn')
+      .onclick=(e)=>{
+        e.stopPropagation();
+        removeCourse(i);
+      };
+
     box.appendChild(div);
   });
 }
 
-/* =====================
-   ADD COURSE
-===================== */
-function addCourse() {
-  const title = document.getElementById('title').value.trim();
-  const url = document.getElementById('url').value.trim();
+/* ADD COURSE */
+function addCourse(){
+  const title=document
+    .getElementById('title')
+    .value.trim();
+
+  const url=document
+    .getElementById('url')
+    .value.trim();
 
   let listId;
-  try {
-    const u = new URL(url);
-    listId = u.searchParams.get('list');
-  } catch { }
 
-  if (!title || !listId) {
+  try{
+    const u=new URL(url);
+    listId=u.searchParams.get('list');
+  }catch{}
+
+  if(!title||!listId){
     alert('Please paste a valid YouTube PLAYLIST link');
     return;
   }
@@ -94,72 +183,118 @@ function addCourse() {
   courses.push({
     title,
     listId,
-    videoIndex: 0,
-    time: 0,
-    total: 0
+    videoIndex:0,
+    time:0,
+    total:0
   });
 
   save();
-  document.getElementById('title').value = '';
-  document.getElementById('url').value = '';
+
+  document.getElementById('title').value='';
+  document.getElementById('url').value='';
+
   renderCourses();
 }
 
-/* =====================
-   OPEN COURSE
-===================== */
-function openCourse(i) {
-  if (!player) return;
-  currentIndex = i;
-  const c = courses[i];
+/* REMOVE COURSE */
+function removeCourse(index){
 
-  document.getElementById('status').innerText = `Studying: ${c.title}`;
+  if(!confirm('Remove this playlist?'))
+    return;
+
+  if(index===currentIndex && player){
+    player.stopVideo();
+    currentIndex=null;
+    document.getElementById('status')
+      .innerText='Add a playlist to start';
+  }
+
+  courses.splice(index,1);
+
+  if(currentIndex!==null &&
+     index<currentIndex){
+    currentIndex--;
+  }
+
+  save();
+  renderCourses();
+}
+
+/* OPEN COURSE */
+function openCourse(i){
+  if(!player) return;
+
+  currentIndex=i;
+  const c=courses[i];
+
+  document.getElementById('status')
+    .innerText=`Studying: ${c.title}`;
 
   player.loadPlaylist({
-    list: c.listId,
-    index: c.videoIndex,
-    startSeconds: c.time
+    list:c.listId,
+    index:c.videoIndex,
+    startSeconds:c.time
   });
 
   renderCourses();
 }
 
-/* =====================
-   SAVE PROGRESS
-===================== */
-function saveProgress() {
-  if (currentIndex === null || !player) return;
+/* SAVE PROGRESS */
+function saveProgress(){
+  if(currentIndex===null||!player)
+    return;
 
-  const c = courses[currentIndex];
-  c.videoIndex = player.getPlaylistIndex();
-  c.time = Math.floor(player.getCurrentTime());
-  c.total = player.getPlaylist()?.length || c.total;
+  const c=courses[currentIndex];
+
+  c.videoIndex=
+    player.getPlaylistIndex();
+
+  c.time=
+    Math.floor(player.getCurrentTime());
+
+  c.total=
+    player.getPlaylist()?.length
+    ||c.total;
 
   save();
   renderCourses();
 }
 
-function save() {
-  localStorage.setItem(KEY, JSON.stringify(courses));
+function save(){
+  localStorage.setItem(
+    KEY,
+    JSON.stringify(courses)
+  );
 }
 
-/* =====================
-   YOUTUBE API CALLBACK
-===================== */
-window.onYouTubeIframeAPIReady = function () {
-  player = new YT.Player('player', {
-    playerVars: {
-      rel: 0,
-      modestbranding: 1
+/* YOUTUBE PLAYER */
+window.onYouTubeIframeAPIReady=
+function(){
+  player=new YT.Player('player',{
+    playerVars:{
+      rel:0,
+      modestbranding:1
     },
-    events: {
-      onStateChange: e => {
-        if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) {
+    events:{
+      onStateChange:e=>{
+
+        if(
+          e.data===YT.PlayerState.PAUSED||
+          e.data===YT.PlayerState.ENDED
+        ){
           saveProgress();
         }
-        if (e.data === YT.PlayerState.ENDED) {
-          courses[currentIndex].videoIndex++;
-          courses[currentIndex].time = 0;
+
+        if(
+          e.data===YT.PlayerState.ENDED &&
+          currentIndex!==null
+        ){
+          courses[currentIndex]
+            .videoIndex++;
+
+          courses[currentIndex]
+            .time=0;
+
           save();
         }
       }
@@ -169,5 +304,6 @@ window.onYouTubeIframeAPIReady = function () {
 
 renderCourses();
 </script>
+
 </body>
 </html>
