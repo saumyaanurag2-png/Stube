@@ -58,6 +58,23 @@ button:hover{
   border-radius:12px;
   padding:10px;
   margin-bottom:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+/* REMOVE BUTTON */
+.deleteBtn{
+  background:#ef4444;
+  border:none;
+  padding:6px 10px;
+  border-radius:8px;
+  font-size:12px;
+  cursor:pointer;
+}
+
+.deleteBtn:hover{
+  background:#dc2626;
 }
 
 #player{
@@ -160,6 +177,20 @@ function addCourse(){
  render();
 }
 
+/* REMOVE */
+function removeCourse(i){
+ if(!confirm("Delete this playlist?")) return;
+
+ if(i === currentIndex && player){
+   player.stopVideo();
+   currentIndex = null;
+ }
+
+ courses.splice(i,1);
+ save();
+ render();
+}
+
 /* RENDER COURSES */
 function render(){
  let box=document.getElementById("courses");
@@ -168,8 +199,21 @@ function render(){
  courses.forEach((c,i)=>{
   let div=document.createElement("div");
   div.className="course";
-  div.innerText=c.title;
+
+  div.innerHTML = `
+    <span>${c.title}</span>
+    <button class="deleteBtn">Remove</button>
+  `;
+
+  /* OPEN */
   div.onclick=()=>openCourse(i);
+
+  /* REMOVE BUTTON FIX */
+  div.querySelector(".deleteBtn").onclick=(e)=>{
+    e.stopPropagation(); // IMPORTANT
+    removeCourse(i);
+  };
+
   box.appendChild(div);
  });
 }
@@ -178,11 +222,10 @@ function render(){
 function openCourse(i){
  currentIndex=i;
  player.loadPlaylist({list:courses[i].listId});
-
- waitForPlaylist(); // IMPORTANT FIX
+ waitForPlaylist();
 }
 
-/* WAIT UNTIL PLAYLIST LOADS */
+/* WAIT */
 function waitForPlaylist(retry=0){
  let list=player.getPlaylist();
 
@@ -222,7 +265,7 @@ function renderPlaylist(){
  });
 }
 
-/* YT API */
+/* YT */
 function onYouTubeIframeAPIReady(){
  player=new YT.Player("player",{
    events:{
