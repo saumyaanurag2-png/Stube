@@ -3,201 +3,343 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stube - StudyTube</title>
+<title>StudyTube</title>
+
+<script src="https://www.youtube.com/iframe_api"></script>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  background: #f5f5f5;
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#0b1220;
+  color:#e5e7eb;
 }
 
-header {
-  background: #222;
-  color: white;
-  padding: 10px;
-  text-align: center;
+header{
+  padding:14px 18px;
+  border-bottom:1px solid #1e293b;
+  background:#020617;
 }
 
-.container {
-  padding: 20px;
+main{
+  display:grid;
+  grid-template-columns:300px 1fr;
+  height:calc(100vh - 52px);
 }
 
-input, button {
-  padding: 8px;
-  margin: 5px;
+aside{
+  padding:12px;
+  border-right:1px solid #1e293b;
+  overflow-y:auto;
 }
 
-.video-player {
-  margin-top: 20px;
+section{padding:12px;}
+
+input,button{
+  width:100%;
+  padding:10px;
+  margin-bottom:8px;
+  border-radius:10px;
+  border:1px solid #334155;
+  background:#020617;
+  color:white;
 }
 
-iframe {
-  width: 100%;
-  height: 400px;
-  border-radius: 10px;
+button:hover{
+  background:#1e293b;
+  cursor:pointer;
 }
 
-.playlist-section {
-  margin-top: 30px;
-  padding: 15px;
-  background: white;
-  border-radius: 10px;
+/* COURSE CARD */
+.course{
+  border:1px solid #334155;
+  border-radius:12px;
+  padding:10px;
+  margin-bottom:12px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
 }
 
-.playlist {
-  border: 1px solid #ccc;
-  margin-top: 10px;
-  padding: 10px;
-  border-radius: 8px;
+.course.active{
+  background:#1e293b;
 }
 
-.video-item {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 5px;
+.progress{
+  height:6px;
+  background:#020617;
+  border-radius:6px;
+  overflow:hidden;
+}
+
+.progress div{
+  height:100%;
+  background:#38bdf8;
+}
+
+/* REMOVE BUTTON */
+.deleteBtn{
+  background:#ef4444;
+  border:none;
+  color:white;
+  padding:6px;
+  border-radius:8px;
+  font-size:13px;
+}
+
+.deleteBtn:hover{
+  background:#dc2626;
+}
+
+#player{
+  width:100%;
+  aspect-ratio:16/9;
+  background:black;
+  border-radius:14px;
+}
+
+.meta{
+  margin-top:8px;
+  color:#94a3b8;
 }
 </style>
 </head>
 
 <body>
 
-<header>
-  <h1>📚 Stube - StudyTube</h1>
-</header>
+<header><strong>StudyTube – Continuous Study</strong></header>
 
-<div class="container">
+<main>
 
-  <!-- VIDEO PLAYER -->
-  <h2>Watch Video</h2>
-  <input type="text" id="videoURL" placeholder="Paste YouTube URL">
-  <button onclick="loadVideo()">Play</button>
+<aside>
+<input id="title" placeholder="Course name">
+<input id="url" placeholder="YouTube PLAYLIST URL">
+<button onclick="addCourse()">Add Course</button>
 
-  <div class="video-player">
-    <iframe id="player" src="" allowfullscreen></iframe>
-  </div>
+<hr style="border-color:#1e293b">
 
-  <!-- PLAYLIST SECTION -->
-  <div class="playlist-section">
-    <h2>🎵 Playlists</h2>
+<div id="courses"></div>
+</aside>
 
-    <input type="text" id="playlistName" placeholder="New playlist name">
-    <button onclick="createPlaylist()">Create</button>
-
-    <div id="playlists"></div>
-  </div>
-
+<section>
+<div id="player"></div>
+<div id="status" class="meta">
+Add a playlist to start
 </div>
+</section>
+
+</main>
 
 <script>
-let playlists = JSON.parse(localStorage.getItem("playlists")) || {};
-let currentVideo = "";
+const KEY="studytube_courses";
 
-// Convert normal YouTube link → embed link
-function convertToEmbed(url) {
-  if (url.includes("watch?v=")) {
-    return url.replace("watch?v=", "embed/");
+let courses=
+JSON.parse(localStorage.getItem(KEY)||"[]");
+
+let currentIndex=null;
+let player=null;
+
+/* SAVE */
+function save(){
+ localStorage.setItem(
+   KEY,
+   JSON.stringify(courses)
+ );
+}
+
+/* RENDER */
+function renderCourses(){
+
+ const box=document.getElementById("courses");
+ box.innerHTML="";
+
+ courses.forEach((c,i)=>{
+
+  const percent=c.total
+   ?Math.floor((c.videoIndex/c.total)*100)
+   :0;
+
+  const div=document.createElement("div");
+  div.className=
+   "course"+
+   (i===currentIndex?" active":"");
+
+  div.innerHTML=`
+   <strong>${c.title}</strong>
+
+   <div class="progress">
+     <div style="width:${percent}%"></div>
+   </div>
+
+   <small>${percent}% complete</small>
+
+   <button class="deleteBtn">
+     Remove Playlist
+   </button>
+  `;
+
+  /* OPEN */
+  div.onclick=()=>openCourse(i);
+
+  /* REMOVE */
+  div.querySelector(".deleteBtn")
+  .onclick=(e)=>{
+    e.stopPropagation();
+    removeCourse(i);
+  };
+
+  box.appendChild(div);
+ });
+}
+
+/* ADD COURSE */
+function addCourse(){
+
+ const title=
+ document.getElementById("title")
+ .value.trim();
+
+ const url=
+ document.getElementById("url")
+ .value.trim();
+
+ let listId;
+
+ try{
+   const u=new URL(url);
+   listId=u.searchParams.get("list");
+ }catch{}
+
+ if(!title||!listId){
+   alert("Paste valid playlist link");
+   return;
+ }
+
+ courses.push({
+   title,
+   listId,
+   videoIndex:0,
+   time:0,
+   total:0
+ });
+
+ save();
+
+ document.getElementById("title").value="";
+ document.getElementById("url").value="";
+
+ renderCourses();
+}
+
+/* REMOVE COURSE */
+function removeCourse(index){
+
+ if(!confirm("Delete playlist?"))
+   return;
+
+ if(index===currentIndex && player){
+   player.stopVideo();
+   currentIndex=null;
+   document.getElementById("status")
+   .innerText="Add a playlist to start";
+ }
+
+ courses.splice(index,1);
+
+ if(currentIndex!==null &&
+    index<currentIndex){
+   currentIndex--;
+ }
+
+ save();
+ renderCourses();
+}
+
+/* OPEN COURSE */
+function openCourse(i){
+
+ if(!player) return;
+
+ currentIndex=i;
+ const c=courses[i];
+
+ document.getElementById("status")
+ .innerText="Studying: "+c.title;
+
+ player.loadPlaylist({
+   list:c.listId,
+   index:c.videoIndex,
+   startSeconds:c.time
+ });
+
+ renderCourses();
+}
+
+/* SAVE PROGRESS */
+function saveProgress(){
+
+ if(currentIndex===null||!player)
+  return;
+
+ const c=courses[currentIndex];
+
+ c.videoIndex=
+ player.getPlaylistIndex();
+
+ c.time=
+ Math.floor(
+   player.getCurrentTime()
+ );
+
+ c.total=
+ player.getPlaylist()?.length
+ ||c.total;
+
+ save();
+ renderCourses();
+}
+
+/* YOUTUBE PLAYER */
+window.onYouTubeIframeAPIReady=
+function(){
+
+ player=new YT.Player(
+  "player",
+  {
+   playerVars:{
+     rel:0,
+     modestbranding:1
+   },
+
+   events:{
+    onStateChange:e=>{
+
+     if(
+      e.data===YT.PlayerState.PAUSED||
+      e.data===YT.PlayerState.ENDED
+     ){
+       saveProgress();
+     }
+
+     if(
+      e.data===YT.PlayerState.ENDED &&
+      currentIndex!==null
+     ){
+       courses[currentIndex]
+       .videoIndex++;
+
+       courses[currentIndex]
+       .time=0;
+
+       save();
+     }
+    }
+   }
   }
-  if (url.includes("youtu.be/")) {
-    return url.replace("youtu.be/", "youtube.com/embed/");
-  }
-  return url;
-}
+ );
+};
 
-// Load video
-function loadVideo() {
-  let url = document.getElementById("videoURL").value.trim();
-  if (!url) return;
-
-  currentVideo = url;
-  document.getElementById("player").src = convertToEmbed(url);
-}
-
-// Save
-function savePlaylists() {
-  localStorage.setItem("playlists", JSON.stringify(playlists));
-}
-
-// Create playlist
-function createPlaylist() {
-  let name = document.getElementById("playlistName").value.trim();
-  if (!name) return alert("Enter name");
-
-  if (playlists[name]) {
-    alert("Already exists");
-    return;
-  }
-
-  playlists[name] = [];
-  savePlaylists();
-  displayPlaylists();
-  document.getElementById("playlistName").value = "";
-}
-
-// Delete playlist
-function deletePlaylist(name) {
-  delete playlists[name];
-  savePlaylists();
-  displayPlaylists();
-}
-
-// Add current video
-function addCurrentVideo(name) {
-  if (!currentVideo) {
-    alert("Play a video first");
-    return;
-  }
-
-  playlists[name].push(currentVideo);
-  savePlaylists();
-  displayPlaylists();
-}
-
-// Remove video
-function removeVideo(name, index) {
-  playlists[name].splice(index, 1);
-  savePlaylists();
-  displayPlaylists();
-}
-
-// Play from playlist
-function playFromPlaylist(url) {
-  currentVideo = url;
-  document.getElementById("player").src = convertToEmbed(url);
-}
-
-// Display playlists
-function displayPlaylists() {
-  let container = document.getElementById("playlists");
-  container.innerHTML = "";
-
-  for (let name in playlists) {
-    let div = document.createElement("div");
-    div.className = "playlist";
-
-    let videosHTML = playlists[name].map((video, index) => {
-      return `
-        <div class="video-item">
-          <span onclick="playFromPlaylist('${video}')" style="cursor:pointer;color:blue">
-            ▶ Play
-          </span>
-          <button onclick="removeVideo('${name}', ${index})">❌</button>
-        </div>
-      `;
-    }).join("");
-
-    div.innerHTML = `
-      <h3>${name}</h3>
-      <button onclick="addCurrentVideo('${name}')">➕ Add Current Video</button>
-      <button onclick="deletePlaylist('${name}')">🗑 Delete</button>
-      ${videosHTML}
-    `;
-
-    container.appendChild(div);
-  }
-}
-
-displayPlaylists();
+renderCourses();
 </script>
 
 </body>
